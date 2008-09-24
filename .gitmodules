@@ -1,3 +1,0 @@
-[submodule "jboss-as-rails"]
-	path = jboss-as-rails
-	url = git://github.com/bobmcwhirter/jboss-as-rails.git
