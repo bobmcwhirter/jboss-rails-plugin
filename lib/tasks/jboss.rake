@@ -1,11 +1,37 @@
 
 DEFAULT_JBOSS_HOME = File.dirname( __FILE__ ) + '/../../jboss-as-rails'
 
-jboss_home = DEFAULT_JBOSS_HOME
+jboss_home = nil
 
 namespace :jboss do 
 
-  task :'run' do
+  task :'check' do
+    jboss_home = ENV['JBOSS_HOME']
+
+    ( jboss_home = jboss_home.strip) unless ( jboss_home.nil? )
+    ( jboss_home = nil ) if ( jboss_home == '' )
+  
+    if ( jboss_home.nil? )
+      if ( File.exist?( DEFAULT_JBOSS_HOME ) ) 
+        jboss_home = DEFAULT_JBOSS_HOME
+      end
+    end
+  
+    if ( jboss_home.nil? )
+      raise "No JBOSS_HOME.  Try 'rake jboss:install'"
+    end
+
+    puts "JBOSS_HOME ... #{jboss_home}"
+  end
+
+  task :'install' do 
+    if ( File.exist?( DEFAULT_JBOSS_HOME ) )
+      raise "Something exists at #{DEFAULT_JBOSS_HOME}"
+    end
+    exec "git clone git://github.com/bobmcwhirter/jboss-as-rails.git #{DEFAULT_JBOSS_HOME}"
+  end
+
+  task :'run'=>[:check] do
     puts "starting jboss-as-rails"
     jboss = JBossHelper.new( jboss_home )
     jboss.run
@@ -18,7 +44,7 @@ namespace :jboss do
     jboss.run
   end
 
-  task :'deploy' do
+  task :'deploy'=>[:check] do
     jboss = JBossHelper.new( jboss_home )
     app_dir = RAILS_ROOT
     app_name = File.basename( app_dir )
@@ -26,7 +52,7 @@ namespace :jboss do
     
   end
 
-  task :'undeploy' do
+  task :'undeploy'=>[:check] do
     jboss = JBossHelper.new( jboss_home )
     app_dir = RAILS_ROOT
     app_name = File.basename( app_dir )
