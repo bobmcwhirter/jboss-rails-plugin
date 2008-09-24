@@ -1,4 +1,6 @@
 
+require 'fileutils'
+
 DEFAULT_JBOSS_HOME = File.dirname( __FILE__ ) + '/../../jboss-as-rails'
 
 jboss_home = nil
@@ -65,6 +67,12 @@ namespace :jboss do
     jboss.undeploy_all
   end
 
+  task :'deploy-force'=>[:check] do
+    jboss = JBossHelper.new( jboss_home )
+    app_dir = RAILS_ROOT
+    app_name = File.basename( app_dir )
+    jboss.deploy( app_name, app_dir, true )
+  end
 
 end
 
@@ -82,11 +90,17 @@ class JBossHelper
     end
   end
 
-  def deploy(app_name, rails_root)
+  def deploy(app_name, rails_root, force=false)
     deployment = deployment_name( app_name )
     if ( File.exist?( deployment ) ) 
-      puts "ERROR: already deployed: #{app_name}"
-      return
+      if ( force )
+        FileUtils.touch( deployment )
+        puts "INFO: forcing redeploy: #{app_name}"
+        return
+      else
+        puts "ERROR: already deployed: #{app_name}"
+        return
+      end
     end
 
     deployment_descriptor = {
