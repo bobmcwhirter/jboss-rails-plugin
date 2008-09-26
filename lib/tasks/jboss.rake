@@ -8,6 +8,7 @@ jboss_home = nil
 
 namespace :jboss do 
 
+  desc "Check for JBOSS_HOME"
   task :'check' do
     jboss_home = ENV['JBOSS_HOME']
 
@@ -26,12 +27,15 @@ namespace :jboss do
   end
 
   namespace :as do
+    desc "Install Rails-enabled JBoss AS 5.x"
     task :install do
       if ( File.exist?( DEFAULT_JBOSS_HOME ) )
         raise "Something exists at #{DEFAULT_JBOSS_HOME}"
       end
       exec "git clone git://github.com/bobmcwhirter/jboss-as-rails.git #{DEFAULT_JBOSS_HOME}"
     end
+
+    desc "Run JBoss AS"
     task :'run'=>[:check] do
       jboss = JBossHelper.new( jboss_home )
       jboss.run
@@ -42,9 +46,12 @@ namespace :jboss do
   namespace :rails do
  
     namespace :'jdbc' do 
+      desc "Install needed JDBC drivers to vendor/plugins/"
       task :'install' do
         Rake::Task['jboss:rails:jdbc:install:auto'].invoke
       end
+
+      desc "Uninstall JDBC drivers"
       task :'uninstall'=>[:check] do
         files = Dir["#{VENDOR_PLUGINS}/activerecord-jdbc*"] + Dir["#{VENDOR_PLUGINS}/jdbc-*"]
         for file in files
@@ -70,13 +77,18 @@ namespace :jboss do
           database_yml.each do |env,db_config|
             adapter = db_config['adapter']
             if ( DB_TYPES.include?( adapter ) )
+              puts "WARNING: config/database.yml:#{env}: You must prefix the adapter with 'jdbc'"
+              puts "    #{env}:"
+              puts "        adapter: jdbc#{adapter}"
               db_types << adapter
             elsif ( adapter == 'jdbc' )
               puts "INFO: config/database.yml:#{env}: No need to use the 'jdbc' adapter"
-            elsif ( adapter =~ /^jdbc(.*)$/ )
-            simple_adapter = $1
-              puts "INFO: config/database.yml:#{env}: No need to use the 'jdbc' prefix.  Change #{adapter} to #{simple_adapter}"
               db_types << simple_adapter
+            elsif ( adapter =~ /^jdbc(.+)/ )
+              adapter = $1
+              if ( DB_TYPES.include? ( adapter ) )
+                db_types << adapter
+              end
             else
               puts "WARNING: config/database.yml:#{env}: Unknown adapter: #{adapter}"
             end
@@ -106,12 +118,14 @@ namespace :jboss do
           Gem::Installer.new( gem_path ).unpack( "#{VENDOR_PLUGINS}/#{gem_name}" )
         end
     
+        desc "Install the base activerecord-jdbc gem"
         task :install_base=>[:check] do
           db_gem = Dir["#{GEM_CACHE}/activerecord-jdbc-adapter-*.gem"].first
           install_gem_safely( db_gem )
         end
     
         DB_TYPES.keys.each do |db_type|
+          desc "Install the activerecord-jdbc-#{db_type} gems"
           task db_type.to_sym=>[:install_base] do
             glob = "#{GEM_CACHE}/jdbc-#{db_type}-*.gem"
             db_gems = Dir["#{GEM_CACHE}/activerecord-jdbc#{db_type}-adapter-*.gem"]
@@ -126,6 +140,7 @@ namespace :jboss do
       end
     end
 
+    desc "Deploy this application"
     task :'deploy'=>[:check] do
       jboss = JBossHelper.new( jboss_home )
       app_dir = RAILS_ROOT
@@ -133,6 +148,7 @@ namespace :jboss do
       jboss.deploy( app_name, app_dir )
     end
 
+    desc "Undeploy this application"
     task :'undeploy'=>[:check] do
       jboss = JBossHelper.new( jboss_home )
       app_dir = RAILS_ROOT
@@ -140,6 +156,7 @@ namespace :jboss do
       jboss.undeploy( app_name )
     end
 
+    desc "Deploy or re-deploy this application"
     task :'deploy-force'=>[:check] do
       jboss = JBossHelper.new( jboss_home )
       app_dir = RAILS_ROOT
