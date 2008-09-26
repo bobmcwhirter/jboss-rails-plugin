@@ -1,5 +1,6 @@
 
 require 'fileutils'
+require 'rubygems/installer'
 
 DEFAULT_JBOSS_HOME = File.dirname( __FILE__ ) + '/../../jboss-as-rails'
 
@@ -20,13 +21,99 @@ namespace :jboss do
     end
   
     if ( jboss_home.nil? )
-      raise "No JBOSS_HOME.  Try 'rake jboss:install'"
+      raise "No JBOSS_HOME.  Try 'rake jboss:install-as-rails'"
     end
 
     puts "JBOSS_HOME ... #{jboss_home}"
   end
 
-  task :'install' do 
+
+  namespace :'install-jdbc' do
+
+    DB_TYPES = { 
+      "derby"=>"derby", 
+      "h2"=>"h2",
+      "hsqldb"=>"hsqldb", 
+      "mysql"=>"mysql", 
+      "postgresql"=>"postgres", 
+      "sqlite3"=>"sqlite3",
+    }
+    VENDOR_PLUGINS = "#{RAILS_ROOT}/vendor/jdbc"
+
+    task :'auto'=>[:check] do
+      puts "doing magic install"
+      database_yml   = YAML.load_file( "#{RAILS_ROOT}/config/database.yml" )
+      db_types = []
+  
+      database_yml.each do |env,db_config|
+        adapter = db_config['adapter']
+        if ( DB_TYPES.include?( adapter ) )
+          db_types << adapter
+        elsif ( adapter == 'jdbc' )
+          puts "config/database.yml:#{env}: No need to use the 'jdbc' adapter"
+        elsif ( adapter =~ /^jdbc(.*)$/ )
+          simple_adapter = $1
+          puts "config/database.yml:#{env}: No need to use the 'jdbc' prefix.  Change #{adapter} to #{simple_adapter}"
+          db_types << simple_adapter
+        else
+          puts "config/database.yml:#{env}: Unknown adapter: #{adapter}"
+        end
+      end
+
+      db_types.uniq!
+      db_types.each do |db_type|
+        puts "installing: #{db_type}"
+        Rake::Task["jboss:install-jdbc:#{db_type}"].invoke
+      end
+    end
+
+    task :check=>[:'jboss:check'] do
+      GEM_CACHE = "#{jboss_home}/server/default/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
+    end
+
+    def install_gem_safely(gem_path)
+      gem_name = File.basename( gem_path, ".gem" )
+      simple_gem_name = File.basename( gem_path )
+      simple_gem_name = simple_gem_name.gsub( /-([0-9]+\.)+gem$/, '' )
+  
+      existing = Dir[ "#{VENDOR_PLUGINS}/#{simple_gem_name}-*" ]
+      unless ( existing.empty? )
+        puts "Gem exists; not installing: #{simple_gem_name}"
+        return
+      end
+      puts "Installing #{gem_name}"
+      Gem::Installer.new( gem_path ).unpack( "#{VENDOR_PLUGINS}/#{gem_name}" )
+    end
+
+    task :install_base=>[:check] do
+      db_gem = Dir["#{GEM_CACHE}/activerecord-jdbc-adapter-*.gem"].first
+      install_gem_safely( db_gem )
+    end
+
+    DB_TYPES.keys.each do |db_type|
+      task db_type.to_sym=>[:install_base] do
+        glob = "#{GEM_CACHE}/jdbc-#{db_type}-*.gem"
+        db_gems = Dir["#{GEM_CACHE}/activerecord-jdbc#{db_type}-adapter-*.gem"]
+        if ( DB_TYPES[db_type] != nil )
+          db_gems += Dir["#{GEM_CACHE}/jdbc-#{DB_TYPES[db_type]}-*.gem"]
+        end
+        db_gems.each do |db_gem|
+          install_gem_safely( db_gem )
+        end
+      end
+    end
+
+    #puts "Installng JDBC gems from #{gem_cache} to #{vendor_gems}"
+    #gems = Dir["#{gem_cache}/activerecord-jdbc*.gem"] + Dir["#{gem_cache}/jdbc-*.gem"]
+    #for gem in gems
+      #gem_name = File.basename( gem, ".gem" )
+      #puts "Installing #{gem_name}"
+      #installer = Gem::Installer.new( gem )
+      #installer.unpack( "#{vendor_gems}/#{gem_name}" )
+    #end
+  end
+
+  task :'install-as-rails' do 
     if ( File.exist?( DEFAULT_JBOSS_HOME ) )
       raise "Something exists at #{DEFAULT_JBOSS_HOME}"
     end
@@ -36,13 +123,6 @@ namespace :jboss do
   task :'run'=>[:check] do
     puts "starting jboss-as-rails"
     jboss = JBossHelper.new( jboss_home )
-    jboss.run
-  end
-
-  task :'run-clean' do
-    puts "starting jboss-as-rails cleanly"
-    jboss = JBossHelper.new( jboss_home )
-    jboss.undeploy_all
     jboss.run
   end
 
@@ -59,12 +139,6 @@ namespace :jboss do
     app_dir = RAILS_ROOT
     app_name = File.basename( app_dir )
     jboss.undeploy( app_name )
-  end
-
-  task :'undeploy-all' do
-    puts "undeploying all rails applications"
-    jboss = JBossHelper.new( jboss_home )
-    jboss.undeploy_all
   end
 
   task :'deploy-force'=>[:check] do
