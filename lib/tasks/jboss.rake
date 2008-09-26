@@ -28,89 +28,91 @@ namespace :jboss do
   end
 
 
-  namespace :'install-jdbc' do
+  namespace :'jdbc' do 
+    task :'install' do
+      Rake::Task['jboss:jdbc:install:auto'].invoke
+    end
+    task :'uninstall'=>[:check] do
+      files = Dir["#{VENDOR_PLUGINS}/activerecord-jdbc*"] + Dir["#{VENDOR_PLUGINS}/jdbc-*"]
+      for file in files
+        FileUtils.rm_rf( file )
+      end
+    end
+    namespace :'install' do
 
-    DB_TYPES = { 
-      "derby"=>"derby", 
-      "h2"=>"h2",
-      "hsqldb"=>"hsqldb", 
-      "mysql"=>"mysql", 
-      "postgresql"=>"postgres", 
-      "sqlite3"=>"sqlite3",
-    }
-    VENDOR_PLUGINS = "#{RAILS_ROOT}/vendor/jdbc"
-
-    task :'auto'=>[:check] do
-      puts "doing magic install"
-      database_yml   = YAML.load_file( "#{RAILS_ROOT}/config/database.yml" )
-      db_types = []
+      DB_TYPES = { 
+        "derby"=>"derby", 
+        "h2"=>"h2",
+        "hsqldb"=>"hsqldb", 
+        "mysql"=>"mysql", 
+        "postgresql"=>"postgres", 
+        "sqlite3"=>"sqlite3",
+      }
+      VENDOR_PLUGINS = "#{RAILS_ROOT}/vendor/plugins"
   
-      database_yml.each do |env,db_config|
-        adapter = db_config['adapter']
-        if ( DB_TYPES.include?( adapter ) )
-          db_types << adapter
-        elsif ( adapter == 'jdbc' )
-          puts "config/database.yml:#{env}: No need to use the 'jdbc' adapter"
-        elsif ( adapter =~ /^jdbc(.*)$/ )
-          simple_adapter = $1
-          puts "config/database.yml:#{env}: No need to use the 'jdbc' prefix.  Change #{adapter} to #{simple_adapter}"
-          db_types << simple_adapter
-        else
-          puts "config/database.yml:#{env}: Unknown adapter: #{adapter}"
+      task :'auto'=>[:check] do
+        puts "doing magic install"
+        database_yml   = YAML.load_file( "#{RAILS_ROOT}/config/database.yml" )
+        db_types = []
+    
+        database_yml.each do |env,db_config|
+          adapter = db_config['adapter']
+          if ( DB_TYPES.include?( adapter ) )
+            db_types << adapter
+          elsif ( adapter == 'jdbc' )
+            puts "config/database.yml:#{env}: No need to use the 'jdbc' adapter"
+          elsif ( adapter =~ /^jdbc(.*)$/ )
+            simple_adapter = $1
+            puts "config/database.yml:#{env}: No need to use the 'jdbc' prefix.  Change #{adapter} to #{simple_adapter}"
+            db_types << simple_adapter
+          else
+            puts "config/database.yml:#{env}: Unknown adapter: #{adapter}"
+          end
         end
-      end
-
-      db_types.uniq!
-      db_types.each do |db_type|
-        puts "installing: #{db_type}"
-        Rake::Task["jboss:install-jdbc:#{db_type}"].invoke
-      end
-    end
-
-    task :check=>[:'jboss:check'] do
-      GEM_CACHE = "#{jboss_home}/server/default/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
-    end
-
-    def install_gem_safely(gem_path)
-      gem_name = File.basename( gem_path, ".gem" )
-      simple_gem_name = File.basename( gem_path )
-      simple_gem_name = simple_gem_name.gsub( /-([0-9]+\.)+gem$/, '' )
   
-      existing = Dir[ "#{VENDOR_PLUGINS}/#{simple_gem_name}-*" ]
-      unless ( existing.empty? )
-        puts "Gem exists; not installing: #{simple_gem_name}"
-        return
-      end
-      puts "Installing #{gem_name}"
-      Gem::Installer.new( gem_path ).unpack( "#{VENDOR_PLUGINS}/#{gem_name}" )
-    end
-
-    task :install_base=>[:check] do
-      db_gem = Dir["#{GEM_CACHE}/activerecord-jdbc-adapter-*.gem"].first
-      install_gem_safely( db_gem )
-    end
-
-    DB_TYPES.keys.each do |db_type|
-      task db_type.to_sym=>[:install_base] do
-        glob = "#{GEM_CACHE}/jdbc-#{db_type}-*.gem"
-        db_gems = Dir["#{GEM_CACHE}/activerecord-jdbc#{db_type}-adapter-*.gem"]
-        if ( DB_TYPES[db_type] != nil )
-          db_gems += Dir["#{GEM_CACHE}/jdbc-#{DB_TYPES[db_type]}-*.gem"]
-        end
-        db_gems.each do |db_gem|
-          install_gem_safely( db_gem )
+        db_types.uniq!
+        db_types.each do |db_type|
+          # puts "installing: #{db_type}"
+          Rake::Task["jboss:jdbc:install:#{db_type}"].invoke
         end
       end
+  
+      task :check=>[:'jboss:check'] do
+        GEM_CACHE = "#{jboss_home}/server/default/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
+      end
+  
+      def install_gem_safely(gem_path)
+        gem_name = File.basename( gem_path, ".gem" )
+        simple_gem_name = File.basename( gem_path )
+        simple_gem_name = simple_gem_name.gsub( /-([0-9]+\.)+gem$/, '' )
+    
+        existing = Dir[ "#{VENDOR_PLUGINS}/#{simple_gem_name}-*" ]
+        unless ( existing.empty? )
+          puts "Gem exists; not installing: #{simple_gem_name}"
+          return
+        end
+        puts "Installing #{gem_name}"
+        Gem::Installer.new( gem_path ).unpack( "#{VENDOR_PLUGINS}/#{gem_name}" )
+      end
+  
+      task :install_base=>[:check] do
+        db_gem = Dir["#{GEM_CACHE}/activerecord-jdbc-adapter-*.gem"].first
+        install_gem_safely( db_gem )
+      end
+  
+      DB_TYPES.keys.each do |db_type|
+        task db_type.to_sym=>[:install_base] do
+          glob = "#{GEM_CACHE}/jdbc-#{db_type}-*.gem"
+          db_gems = Dir["#{GEM_CACHE}/activerecord-jdbc#{db_type}-adapter-*.gem"]
+          if ( DB_TYPES[db_type] != nil )
+            db_gems += Dir["#{GEM_CACHE}/jdbc-#{DB_TYPES[db_type]}-*.gem"]
+          end
+          db_gems.each do |db_gem|
+            install_gem_safely( db_gem )
+          end
+        end
+      end
     end
-
-    #puts "Installng JDBC gems from #{gem_cache} to #{vendor_gems}"
-    #gems = Dir["#{gem_cache}/activerecord-jdbc*.gem"] + Dir["#{gem_cache}/jdbc-*.gem"]
-    #for gem in gems
-      #gem_name = File.basename( gem, ".gem" )
-      #puts "Installing #{gem_name}"
-      #installer = Gem::Installer.new( gem )
-      #installer.unpack( "#{vendor_gems}/#{gem_name}" )
-    #end
   end
 
   task :'install-as-rails' do 
