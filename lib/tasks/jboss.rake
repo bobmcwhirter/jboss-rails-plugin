@@ -101,7 +101,7 @@ namespace :jboss do
         end
     
         task :check=>[:'jboss:check'] do
-          GEM_CACHE = "#{jboss_home}/server/default/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
+          GEM_CACHE = "#{jboss_home}/server/all/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
         end
     
         def install_gem_safely(gem_path)
@@ -176,7 +176,7 @@ class JBossHelper
   def run()
     puts "INFO: Running JBoss AS"
     Dir.chdir(@jboss_home) do
-      exec "/bin/sh bin/run.sh"
+      exec "/bin/sh bin/run.sh -c all"
     end
   end
 
@@ -222,7 +222,7 @@ class JBossHelper
   end
 
   def deployment_name(app_name) 
-    "#{@jboss_home}/server/default/deploy/#{app_name}-rails.yml" 
+    "#{@jboss_home}/server/all/deploy/#{app_name}-rails.yml" 
   end
 
 end
