@@ -1,4 +1,4 @@
-#!/usr/bin/env jruby
+#!/usr/bin/env ruby
 
 require 'fileutils'
 
@@ -50,11 +50,13 @@ class LocalCluster
       @node_number = node_number
       @ip = ip
       @thread = nil
+      @should_stop = false
       log( "created" )
     end
 
     def start
       log( "starting" )
+      @should_stop = false
       @thread = Thread.new( self ) do |node|
         node.run_internal()
       end
@@ -62,6 +64,7 @@ class LocalCluster
 
     def stop
       return if @thread.nil?
+      @should_stop = true
       @thread.join
       @thread = nil
     end
@@ -80,6 +83,9 @@ class LocalCluster
       open( "|#{cmd}", 'r' ) do |c|
         c.each do |l|
           log( l ) 
+          if ( @should_stop )
+            break
+          end
           Thread.pass
         end
       end
