@@ -80,7 +80,9 @@ class LocalCluster
 
       cmd = "#{@cluster.jboss_home}/bin/run.sh -c all -b #{@ip} -Djboss.messaging.ServerPeerID=#{@node_number} -Djboss.server.temp.dir=#{temp_dir} -Djboss.server.data.dir=#{data_dir}"
       puts cmd
+      puts "before starting JBoss from #{defined?(JRuby) ? 'JRuby' : 'Traditional Ruby'}"
       open( "|#{cmd}", 'r' ) do |c|
+        puts "starting JBoss from #{defined?(JRuby) ? 'JRuby' : 'Traditional Ruby'}"
         c.each do |l|
           log( l ) 
           if ( @should_stop )

@@ -1,6 +1,4 @@
 
-require 'fileutils'
-require 'rubygems/installer'
 
 DEFAULT_JBOSS_HOME = File.dirname( __FILE__ ) + '/../../jboss-as-rails'
 
@@ -15,8 +13,6 @@ module JBoss
 end
 
 namespace :jboss do 
-
-
   namespace :as do
     desc "Check for JBOSS_HOME"
     task :'check' do
@@ -45,6 +41,7 @@ namespace :jboss do
     end
 
     namespace :run do
+      desc "Run JBoss AS in a local cluster"
       task :'cluster'=>[:'jboss:as:check'] do
         jboss = JBossHelper.new( JBoss.jboss_home )
         jboss.run_cluster
@@ -70,7 +67,8 @@ class JBossHelper
 
   def run_cluster()
     puts "INFO: Running JBoss AS cluster"
-    exec "ruby #{File.dirname( __FILE__ )}/../../bin/start_local_cluster.rb 127.0.0.10 3"
+    cmd = "jruby #{File.dirname( __FILE__ )}/../../bin/start_local_cluster.rb 127.0.0.10 3'"
+    exec cmd
   end
 
   def deploy(app_name, rails_root, force=false)
