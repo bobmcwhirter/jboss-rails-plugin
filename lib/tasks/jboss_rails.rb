@@ -1,4 +1,6 @@
 
+require 'rubygems/installer'
+
 namespace :jboss do 
 
   namespace :rails do
