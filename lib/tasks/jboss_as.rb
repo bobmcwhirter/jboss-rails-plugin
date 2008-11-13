@@ -40,6 +40,7 @@ namespace :jboss do
       jboss.run
     end
 
+=begin
     namespace :run do
       desc "Run JBoss AS in a local cluster"
       task :'cluster'=>[:'jboss:as:check'] do
@@ -47,6 +48,7 @@ namespace :jboss do
         jboss.run_cluster
       end
     end
+=end
   end
 
 
