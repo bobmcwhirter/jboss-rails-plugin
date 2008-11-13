@@ -61,7 +61,7 @@ class JBossHelper
   def run()
     puts "INFO: Running JBoss AS"
     Dir.chdir(@jboss_home) do
-      exec "/bin/sh bin/run.sh -c all"
+      exec "/bin/sh bin/run.sh -c default"
     end
   end
 
@@ -113,7 +113,7 @@ class JBossHelper
   end
 
   def deployment_name(app_name) 
-    "#{@jboss_home}/server/all/deploy/#{app_name}-rails.yml" 
+    "#{@jboss_home}/server/default/deploy/#{app_name}-rails.yml" 
   end
 
 end

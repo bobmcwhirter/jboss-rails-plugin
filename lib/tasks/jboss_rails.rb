@@ -63,7 +63,7 @@ namespace :jboss do
         end
     
         task :check=>[:'jboss:as:check'] do
-          GEM_CACHE = "#{JBoss.jboss_home}/server/all/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
+          GEM_CACHE = "#{JBoss.jboss_home}/server/default/deployers/jboss-rails.deployer/gems/cache" unless defined?(GEM_CACHE)
         end
     
         def install_gem_safely(gem_path)
