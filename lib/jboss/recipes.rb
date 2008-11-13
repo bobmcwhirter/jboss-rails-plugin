@@ -23,7 +23,7 @@ Capistrano::Configuration.instance.load do
           run "svc -u #{jboss_service_directory}"
         when :initd
           puts "starting server via #{jboss_daemon_manager}"
-          puts "/etc/initd/#{jboss_service_name} start"
+          run "/etc/init.d/#{jboss_service_name} start"
       end
     end
   
@@ -35,7 +35,7 @@ Capistrano::Configuration.instance.load do
           run "svc -d #{jboss_service_directory}"
         when :initd
           puts "stopping server via #{jboss_daemon_manager}"
-          puts "/etc/initd/#{jboss_service_name} stop"
+          run "/etc/init.d/#{jboss_service_name} stop"
       end
     end
   
