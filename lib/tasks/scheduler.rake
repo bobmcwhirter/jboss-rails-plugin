@@ -4,7 +4,6 @@ require 'find'
 namespace :jboss do
   namespace :scheduler do
     namespace :run do
-      puts "RAILS ROOT #{RAILS_ROOT}"
       scheduler_path = "#{RAILS_ROOT}/app/scheduler"
   
       Find.find( scheduler_path ) do |path|
