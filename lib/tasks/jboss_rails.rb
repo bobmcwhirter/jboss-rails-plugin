@@ -103,7 +103,7 @@ namespace :jboss do
     end
 
     desc "Deploy this application"
-    task :'deploy'=>[:'jboss:as:check'] do
+    task :'deploy'=>[:'jboss:as:check', :'jboss:as:check_vendored_rails'] do
       jboss = JBossHelper.new( JBoss.jboss_home )
       app_dir = RAILS_ROOT
       app_name = File.basename( app_dir )

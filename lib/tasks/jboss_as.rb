@@ -33,6 +33,12 @@ namespace :jboss do
 
       JBoss.jboss_home=jboss_home
     end
+    
+    desc "Check for vendor/rails"
+    task :'check_vendored_rails' do
+     vendor_rails = File.exist?("#{RAILS_ROOT}/vendor/rails")
+     raise "Rails must be frozen to run from JBoss.  Try 'rake rails:freeze:gems'" unless vendor_rails
+    end
 
     desc "Run JBoss AS"
     task :'run'=>[:check] do
