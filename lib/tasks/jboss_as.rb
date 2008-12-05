@@ -1,4 +1,4 @@
-
+require 'open3'
 
 DEFAULT_JBOSS_HOME = File.dirname( __FILE__ ) + '/../../jboss-as-rails'
 
@@ -69,7 +69,26 @@ class JBossHelper
   def run()
     puts "INFO: Running JBoss AS"
     Dir.chdir(@jboss_home) do
-      exec "/bin/sh bin/run.sh -c default"
+      #exec "/bin/sh bin/run.sh -c default"
+      old_trap = trap("INT") do
+        puts "caught SIGINT, shutting down"
+      end
+      pid = Open3.popen3( "/bin/sh bin/run.sh -c default" ) do |stdin, stdout, stderr|
+        #stdin.close
+        threads = []
+        threads << Thread.new(stdout) do |input_str|
+          while ( ( l = input_str.gets ) != nil )
+            puts l 
+          end
+        end
+        threads << Thread.new(stderr) do |input_str|
+          while ( ( l = input_str.gets ) != nil )  
+            puts l 
+          end
+        end
+        threads.each{|t|t.join}
+      end
+      trap("INT", old_trap )
     end
   end
 
