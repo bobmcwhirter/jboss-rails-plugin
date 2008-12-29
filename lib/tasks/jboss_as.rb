@@ -10,6 +10,7 @@ module JBoss
   def self.jboss_home=(jboss_home)
     @jboss_home=jboss_home
   end
+
 end
 
 namespace :jboss do 
@@ -62,18 +63,18 @@ end
 
 class JBossHelper
 
-  def initialize(jboss_home) 
+  def initialize(jboss_home, config=:default) 
     @jboss_home = jboss_home
+    @config = config
   end
 
   def run()
     puts "INFO: Running JBoss AS"
     Dir.chdir(@jboss_home) do
-      #exec "/bin/sh bin/run.sh -c default"
       old_trap = trap("INT") do
         puts "caught SIGINT, shutting down"
       end
-      pid = Open3.popen3( "/bin/sh bin/run.sh -c default" ) do |stdin, stdout, stderr|
+      pid = Open3.popen3( "/bin/sh bin/run.sh -c #{@config}" ) do |stdin, stdout, stderr|
         #stdin.close
         threads = []
         threads << Thread.new(stdout) do |input_str|
@@ -140,7 +141,7 @@ class JBossHelper
   end
 
   def deployment_name(app_name) 
-    "#{@jboss_home}/server/default/deploy/#{app_name}-rails.yml" 
+    "#{@jboss_home}/server/#{@config}/deploy/#{app_name}-rails.yml" 
   end
 
 end
